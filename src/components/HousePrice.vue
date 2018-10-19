@@ -31,7 +31,7 @@ export default {
   data() {
     return {
       svgWidth: 600,
-      svgHeight: 200,
+      svgHeight: 400,
       margin: {
         top: 20,
         right: 20,
@@ -57,7 +57,7 @@ export default {
   mounted() {
     this.getStates();
     this.getAverageHousePriceData();
-    this.drawChoroplethMap();
+    // this.drawChoroplethMap();
   },
 
   watch: {
@@ -117,41 +117,31 @@ export default {
       });
     },
     drawPriceTime() {
-      const svg = d3.select("svg");
+      const that = this;
+      let svg = d3.select("svg");
       svg.selectAll("*").remove();
-      svg.attr("width", this.svgWidth).attr("height", this.svgHeight);
+
+      /* Basic svg set up */
+      svg = d3.select("svg")
+        .attr("width", that.svgWidth)
+        .attr("height", that.svgHeight)
+        .append("g")
+        .attr("transform", "translate(" + that.margin.left + "," + that.margin.top + ")");
       const xDomain = d3.extent(
-        this.avgData.map(d => d.date).concat(this.stateData.map(d => d.date))
+        that.avgData.map(d => d.date).concat(that.stateData.map(d => d.date))
       );
       const yDomain = d3.extent(
-        this.avgData.map(d => d.value).concat(this.stateData.map(d => d.value))
+        that.avgData.map(d => d.value).concat(that.stateData.map(d => d.value))
       );
-
-      /* Draw avg data */
-      const g = svg
-        .append("g")
-        .attr(
-          "transform",
-          "translate(" + this.margin.left + "," + this.margin.top + ")"
-        );
-      const x = d3.scaleTime().rangeRound([0, this.width]);
-      const y = d3.scaleLinear().rangeRound([this.height, 0]);
-      const line1 = d3
-        .line()
-        .x(function(d) {
-          return x(d.date);
-        })
-        .y(function(d) {
-          return y(d.value);
-        });
+      const x = d3.scaleTime().rangeRound([0, that.width]);
+      const y = d3.scaleLinear().rangeRound([that.height, 0]);
       x.domain(xDomain);
       y.domain(yDomain);
-      g.append("g")
-        .attr("transform", "translate(0," + this.height + ")")
+      svg.append("g")
+        .attr("transform", "translate(0," + that.height + ")")
         .call(d3.axisBottom(x))
-        .select(".domain")
-        .remove();
-      g.append("g")
+        .select(".domain");
+      svg.append("g")
         .call(d3.axisLeft(y))
         .append("text")
         .attr("fill", "#000")
@@ -160,81 +150,180 @@ export default {
         .attr("dy", "0.71em")
         .attr("text-anchor", "end")
         .text("Price ($)");
-      g.append("path")
-        .datum(this.avgData)
-        .attr("fill", "none")
-        .attr("stroke", "steelblue")
-        .attr("stroke-linejoin", "round")
-        .attr("stroke-linecap", "round")
-        .attr("stroke-width", 1.5)
-        .attr("d", line1);
-
-      /* Draw state data */
-      const line2 = d3
-        .line()
+      const line = d3.line()
         .x(function(d) {
           return x(d.date);
         })
         .y(function(d) {
           return y(d.value);
         });
-      g.append("path")
-        .datum(this.stateData)
+      
+      const house_prices = [
+        {
+          name: 'avg',
+          values: that.avgData,
+        },
+      ];
+      if (that.selectedState) {
+        house_prices.push(
+          {
+            name: that.selectedState,
+            values: that.stateData,
+          },
+        );
+      }
+
+      /* Draw avg data */
+      svg.append("path")
+        .datum(that.avgData)
         .attr("fill", "none")
         .attr("stroke", "steelblue")
         .attr("stroke-linejoin", "round")
         .attr("stroke-linecap", "round")
         .attr("stroke-width", 1.5)
-        .attr("d", line2);
+        .attr("class", "line")
+        .attr("d", line);
+
+      /* Draw state data */
+      svg.append("path")
+        .datum(that.stateData)
+        .attr("fill", "none")
+        .attr("stroke", "steelblue")
+        .attr("stroke-linejoin", "round")
+        .attr("stroke-linecap", "round")
+        .attr("stroke-width", 1.5)
+        .attr("class", "line")
+        .attr("d", line);
+
+      /* Black vertical line to follow mouse */
+      const mouseG = svg.append("g")
+        .attr("class", "mouse-over-effects");
+      mouseG.append("path")
+        .attr("class", "mouse-line")
+        .style("stroke", "black")
+        .style("stroke-width", "1px")
+        .style("opacity", "0");
+      const lines = document.getElementsByClassName('line');
+      const mousePerLine = mouseG.selectAll('.mouse-per-line')
+        .data(house_prices)
+        .enter()
+        .append("g")
+        .attr("class", "mouse-per-line");
+      mousePerLine.append("circle")
+        .attr("r", 7)
+        .style("stroke","steelblue")
+        .style("fill", "none")
+        .style("stroke-width", "1px")
+        .style("opacity", "0");
+      mousePerLine.append("text")
+        .attr("transform", "translate(10,3)");
+      // append a rect to catch mouse movements on canvas
+      mouseG.append("svg:rect")
+        // can't catch mouse events on a g element
+        .attr("width", that.width)
+        .attr("height", that.height)
+        .attr("fill", "none")
+        .attr("pointer-events", "all")
+        // on mouse out hide line, circles and text
+        .on("mouseout", function() {
+          d3.select(".mouse-line")
+            .style("opacity", "0");
+          d3.selectAll(".mouse-per-line circle")
+            .style("opacity", "0");
+          d3.selectAll(".mouse-per-line text")
+            .style("opacity", "0");
+        })
+        // on mouse in show line, circles and text
+        .on("mouseover", function() {
+          d3.select(".mouse-line")
+            .style("opacity", "1");
+          d3.selectAll(".mouse-per-line circle")
+            .style("opacity", "1");
+          d3.selectAll(".mouse-per-line text")
+            .style("opacity", "1");
+        })
+        // mouse moving over canvas
+        .on("mousemove", function() {
+          let mouse = d3.mouse(this);
+          d3.select(".mouse-line")
+            .attr("d", function() {
+              let d = "M" + mouse[0] + "," + that.height;
+              d += " " + mouse[0] + "," + 0;
+              return d;
+            });
+          d3.selectAll(".mouse-per-line")
+            .attr("transform", function(d, i) {
+              const xDate = x.invert(mouse[0]),
+                    bisect = d3.bisector(function(d) { return d.date; }).right,
+                    idx = bisect(d.values, xDate);
+              let beginning = 0,
+                  end = lines[i].getTotalLength(),
+                  target = null,
+                  pos = null;
+              while (true) {
+                target = Math.floor((beginning + end) / 2);
+                pos = lines[i].getPointAtLength(target);
+                if ((target === end || target === beginning) && pos.x !== mouse[0]) {
+                  break;
+                }
+                if (pos.x > mouse[0]) end = target;
+                else if (pos.x < mouse[0]) beginning = target;
+                else break; // position found
+              }
+              d3.select(this).select('text')
+                .text(y.invert(pos.y).toFixed(2));
+              return "translate(" + mouse[0] + "," + pos.y + ")";
+            });
+        });
     },
     drawChoroplethMap() {
       //Width and height of map
-      var width = 960;
-      var height = 500;
+      const width = 960;
+      const height = 500;
 
-      var lowColor = '#f9f9f9'
-      var highColor = '#bc2a66'
+      const lowColor = '#f9f9f9'
+      const highColor = '#bc2a66'
 
       // D3 Projection
-      var projection = d3.geoAlbersUsa()
+      const projection = d3.geoAlbersUsa()
         .translate([width / 2, height / 2]) // translate to center of screen
         .scale([1000]); // scale things down so see entire US
 
       // Define path generator
-      var path = d3.geoPath() // path generator that will convert GeoJSON to SVG paths
+      const path = d3.geoPath() // path generator that will convert GeoJSON to SVG paths
         .projection(projection); // tell path generator to use albersUsa projection
 
       //Create SVG element and append map to the SVG
-      var svg = d3.select("#map")
+      const svg = d3.select("#map")
         .append("svg")
         .attr("width", width)
         .attr("height", height);
 
       // Load in my states data!
       d3.csv("src/assets/statesdata.csv").then(function(data) {
-        var dataArray = [];
-        for (var d = 0; d < data.length; d++) {
+        const dataArray = [];
+        for (let d = 0; d < data.length; d++) {
           dataArray.push(parseFloat(data[d].value))
         }
-        var minVal = d3.min(dataArray)
-        var maxVal = d3.max(dataArray)
-        var ramp = d3.scaleLinear().domain([minVal,maxVal]).range([lowColor,highColor])
+        const minVal = d3.min(dataArray)
+        const maxVal = d3.max(dataArray)
+        const ramp = d3.scaleLinear().domain([minVal,maxVal]).range([lowColor,highColor])
 
         // Load GeoJSON data and merge with states data
         d3.json("src/assets/us-states.json").then(function(json) {
 
           // Loop through each state data value in the .csv file
-          for (var i = 0; i < data.length; i++) {
+          for (let i = 0; i < data.length; i++) {
 
             // Grab State Name
-            var dataState = data[i].state;
+            const dataState = data[i].state;
 
             // Grab data value 
-            var dataValue = data[i].value;
+            const dataValue = data[i].value;
 
             // Find the corresponding state inside the GeoJSON
-            for (var j = 0; j < json.features.length; j++) {
-              var jsonState = json.features[j].properties.name;
+            for (let j = 0; j < json.features.length; j++) {
+              const jsonState = json.features[j].properties.name;
 
               if (dataState == jsonState) {
 
@@ -258,15 +347,15 @@ export default {
             .style("fill", function(d) { return ramp(d.properties.value) });
           
           // add a legend
-          var w = 140, h = 300;
+          const w = 140, h = 300;
 
-          var key = d3.select("#map")
+          const key = d3.select("#map")
             .append("svg")
             .attr("width", w)
             .attr("height", h)
             .attr("class", "legend");
 
-          var legend = key.append("defs")
+          const legend = key.append("defs")
             .append("svg:linearGradient")
             .attr("id", "gradient")
             .attr("x1", "100%")
@@ -291,11 +380,11 @@ export default {
             .style("fill", "url(#gradient)")
             .attr("transform", "translate(0,10)");
 
-          var y = d3.scaleLinear()
+          const y = d3.scaleLinear()
             .range([h, 0])
             .domain([minVal, maxVal]);
 
-          var yAxis = d3.axisRight(y);
+          const yAxis = d3.axisRight(y);
 
           key.append("g")
             .attr("class", "y axis")
