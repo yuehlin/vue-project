@@ -171,7 +171,7 @@ export default {
         .style("fill", d => color(d.name));
       legend.append("text")
         .attr("x", 55)
-        .attr("y", (d, i) => (i * 20) + 9)
+        .attr("y", (d, i) => (i * 20) + 11)
         .text(d => d.name);
 
       /**
@@ -256,7 +256,7 @@ export default {
             .style("opacity", "1");
         })
         // mouse moving over canvas
-        .on("mousemove", () => {
+        .on("mousemove", function() {
           let mouse = d3.mouse(this);
           d3.select(".mouse-line")
             .attr("d", () => {
@@ -265,7 +265,7 @@ export default {
               return d;
             });
           d3.selectAll(".mouse-per-line")
-            .attr("transform", (d, i) => {
+            .attr("transform", function(d, i) {
               const xDate = x.invert(mouse[0]),
                     bisect = d3.bisector(d => d.date).right,
                     idx = bisect(d.values, xDate);
