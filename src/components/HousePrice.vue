@@ -1,10 +1,10 @@
 <template>
-  <b-container>
+  <b-container class="house-price">
     <b-row>
       <b-col>
         <svg class="house-price-line-chart" />
       </b-col>
-      <b-col cols="3">
+      <b-col cols="4">
         <b-form-select v-model="selectedState" :options="stateOptions" class="mb-3" >
           <template slot="first">
             <!-- this slot appears above the options from 'options' prop -->
@@ -13,8 +13,13 @@
         </b-form-select>
       </b-col>
     </b-row>
-    <b-row>
-      <div id="map"></div>
+    <b-row align-v="center">
+      <b-col cols="9">
+        <div id="map"></div>
+      </b-col>
+      <b-col cols="3">
+        <div id="map-legend"></div>
+      </b-col>
     </b-row>
   </b-container>
 </template>
@@ -30,10 +35,10 @@ export default {
       svgWidth: 600,
       svgHeight: 400,
       margin: {
-        top: 20,
+        top: 40,
         right: 80,
-        bottom: 30,
-        left: 50
+        bottom: 80,
+        left: 90,
       },
       avgData: [],
       stateData: [],
@@ -54,7 +59,7 @@ export default {
   mounted() {
     this.getStates();
     this.getAverageHousePriceData();
-    // this.drawChoroplethMap();
+    this.drawChoroplethMap();
   },
 
   watch: {
@@ -73,7 +78,7 @@ export default {
     getAverageHousePriceData() {
       const that = this;
       const defaultUrl = `http://127.0.0.1:5000/house_price_with_time`;
-      d3.json(defaultUrl).then(function(response) {
+      d3.json(defaultUrl).then((response) => {
         that.avgData = [];
         for (let i = 0, len = response.time.length; i < len; i++) {
           that.avgData.push({
@@ -86,9 +91,8 @@ export default {
     getStateHousePriceData() {
       const that = this;
       if (that.selectedState) {
-        const defaultUrl =
-          `http://127.0.0.1:5000/house_price_with_time/` + that.selectedState;
-        d3.json(defaultUrl).then(function(response) {
+        const defaultUrl = `http://127.0.0.1:5000/house_price_with_time/` + that.selectedState;
+        d3.json(defaultUrl).then((response) => {
           that.stateData = [];
           for (let i = 0, len = response.time.length; i < len; i++) {
             that.stateData.push({
@@ -103,7 +107,7 @@ export default {
       const that = this;
       const defaultUrl = `http://127.0.0.1:5000/state_name`;
       const states = [];
-      d3.json(defaultUrl).then(function(response) {
+      d3.json(defaultUrl).then((response) => {
         response.forEach(element => {
           states.push({
             value: element,
@@ -125,12 +129,8 @@ export default {
       const y = d3.scaleLinear().rangeRound([that.height, 0]);
       const color = d3.scaleOrdinal(d3.schemeCategory10);
       const line = d3.line()
-        .x(function(d) {
-          return x(d.date);
-        })
-        .y(function(d) {
-          return y(d.value);
-        });
+        .x(d => x(d.date))
+        .y(d => y(d.value));
       svg = d3.select("svg")
         .attr("width", that.svgWidth)
         .attr("height", that.svgHeight)
@@ -165,38 +165,33 @@ export default {
         .attr("class", "legend");
       legend.append("rect")
         .attr("x", 40)
-        .attr("y", function(d, i) {
-          return i * 20;
-        })
+        .attr("y", (d, i) => i * 20)
         .attr("width", 10)
         .attr("height", 10)
-        .style("fill", function(d) {
-          return color(d.name);
-        });
+        .style("fill", d => color(d.name));
       legend.append("text")
         .attr("x", 55)
-        .attr("y", function(d, i) {
-          return (i * 20) + 9;
-        })
-        .text(function(d) {
-          return d.name;
-        });
+        .attr("y", (d, i) => (i * 20) + 9)
+        .text(d => d.name);
 
       /**
        * Axis
        */
       svg.append("g")
-        .attr("class", "x axis")
         .attr("transform", "translate(0," + that.height + ")")
-        .call(d3.axisBottom(x));
+        .call(d3.axisBottom(x).ticks(d3.timeYear.every(2)));
+      svg.append("text")
+        .attr("transform", "translate(" + (that.width / 2) + "," + (that.height + that.margin.top + 20) + ")")
+        .style("text-anchor", "middle")
+        .text("Time");
       svg.append("g")
-        .attr("class", "y axis")
-        .call(d3.axisLeft(y))
-        .append("text")
+        .call(d3.axisLeft(y).tickFormat(d3.format("~s")).ticks(5));
+      svg.append("text")
         .attr("transform", "rotate(-90)")
-        .attr("y", 6)
-        .attr("dy", "0.71em")
-        .attr("text-anchor", "end")
+        .attr("y", 0 - that.margin.left)
+        .attr("x", 0 - (that.height / 2))
+        .attr("dy", ".71em")
+        .attr("text-anchor", "middle")
         .text("Price ($)");
 
       /**
@@ -208,12 +203,8 @@ export default {
         .attr("class", "house-price");
       house_price.append("path")
         .attr("class", "line")
-        .attr("d", function(d) {
-          return line(d.values);
-        })
-        .style("stroke", function(d) {
-          return color(d.name);
-        });
+        .attr("d", d => line(d.values))
+        .style("stroke", d => color(d.name));
 
       /**
        * Black vertical line to follow mouse
@@ -233,14 +224,11 @@ export default {
         .attr("class", "mouse-per-line");
       mousePerLine.append("circle")
         .attr("r", 6)
-        .style("stroke", function(d) {
-          return color(d.name);
-        })
+        .style("stroke", d => color(d.name))
         .style("fill", "none")
         .style("stroke-width", "2px")
         .style("opacity", "0");
       mousePerLine.append("text")
-        // .style("font", "14px times")
         .attr("transform", "translate(10,3)");
       // append a rect to catch mouse movements on canvas
       mouseG.append("svg:rect")
@@ -250,7 +238,7 @@ export default {
         .attr("fill", "none")
         .attr("pointer-events", "all")
         // on mouse out hide line, circles and text
-        .on("mouseout", function() {
+        .on("mouseout", () => {
           d3.select(".mouse-line")
             .style("opacity", "0");
           d3.selectAll(".mouse-per-line circle")
@@ -259,7 +247,7 @@ export default {
             .style("opacity", "0");
         })
         // on mouse in show line, circles and text
-        .on("mouseover", function() {
+        .on("mouseover", () => {
           d3.select(".mouse-line")
             .style("opacity", "1");
           d3.selectAll(".mouse-per-line circle")
@@ -268,18 +256,18 @@ export default {
             .style("opacity", "1");
         })
         // mouse moving over canvas
-        .on("mousemove", function() {
+        .on("mousemove", () => {
           let mouse = d3.mouse(this);
           d3.select(".mouse-line")
-            .attr("d", function() {
+            .attr("d", () => {
               let d = "M" + mouse[0] + "," + that.height;
               d += " " + mouse[0] + "," + 0;
               return d;
             });
           d3.selectAll(".mouse-per-line")
-            .attr("transform", function(d, i) {
+            .attr("transform", (d, i) => {
               const xDate = x.invert(mouse[0]),
-                    bisect = d3.bisector(function(d) { return d.date; }).right,
+                    bisect = d3.bisector(d => d.date).right,
                     idx = bisect(d.values, xDate);
               let beginning = 0,
                   end = lines[i].getTotalLength(),
@@ -303,16 +291,15 @@ export default {
     },
     drawChoroplethMap() {
       //Width and height of map
-      const width = 960;
-      const height = 500;
-
+      const width = 600;
+      const height = 400;
       const lowColor = '#f9f9f9'
       const highColor = '#bc2a66'
 
       // D3 Projection
       const projection = d3.geoAlbersUsa()
-        .translate([width / 2, height / 2]) // translate to center of screen
-        .scale([1000]); // scale things down so see entire US
+        .translate([width / 2, height / 2])
+        .scale([800]);
 
       // Define path generator
       const path = d3.geoPath() // path generator that will convert GeoJSON to SVG paths
@@ -325,37 +312,27 @@ export default {
         .attr("height", height);
 
       // Load in my states data!
-      d3.csv("src/assets/statesdata.csv").then(function(data) {
-        const dataArray = [];
-        for (let d = 0; d < data.length; d++) {
-          dataArray.push(parseFloat(data[d].value))
-        }
-        const minVal = d3.min(dataArray)
-        const maxVal = d3.max(dataArray)
-        const ramp = d3.scaleLinear().domain([minVal,maxVal]).range([lowColor,highColor])
+      const defaultUrl = `http://127.0.0.1:5000/house_price_with_time/map/2010-02`;
+      d3.json(defaultUrl).then((data) => {
+        const dataArray = data.value;
+        const minVal = d3.min(dataArray.filter(d => d));
+        const maxVal = d3.max(dataArray.filter(d => d));
+        const ramp = d3.scaleLinear().domain([minVal,maxVal]).range([lowColor,highColor]);
 
         // Load GeoJSON data and merge with states data
-        d3.json("src/assets/us-states.json").then(function(json) {
-
+        d3.json("src/assets/us-states.json").then((json) => {
           // Loop through each state data value in the .csv file
-          for (let i = 0; i < data.length; i++) {
-
+          for (let i = 0; i < data.state.length; i++) {
             // Grab State Name
-            const dataState = data[i].state;
-
+            const dataState = data.state[i];
             // Grab data value 
-            const dataValue = data[i].value;
-
+            const dataValue = data.value[i];
             // Find the corresponding state inside the GeoJSON
             for (let j = 0; j < json.features.length; j++) {
               const jsonState = json.features[j].properties.name;
-
               if (dataState == jsonState) {
-
                 // Copy the data value into the JSON
                 json.features[j].properties.value = dataValue;
-
-                // Stop looking through the JSON
                 break;
               }
             }
@@ -367,55 +344,50 @@ export default {
             .enter()
             .append("path")
             .attr("d", path)
+            .attr("id", d => d.properties.name)
             .style("stroke", "#fff")
             .style("stroke-width", "1")
-            .style("fill", function(d) { return ramp(d.properties.value) });
-          
-          // add a legend
-          const w = 140, h = 300;
-
-          const key = d3.select("#map")
-            .append("svg")
-            .attr("width", w)
-            .attr("height", h)
-            .attr("class", "legend");
-
-          const legend = key.append("defs")
-            .append("svg:linearGradient")
-            .attr("id", "gradient")
-            .attr("x1", "100%")
-            .attr("y1", "0%")
-            .attr("x2", "100%")
-            .attr("y2", "100%")
-            .attr("spreadMethod", "pad");
-
-          legend.append("stop")
-            .attr("offset", "0%")
-            .attr("stop-color", highColor)
-            .attr("stop-opacity", 1);
-            
-          legend.append("stop")
-            .attr("offset", "100%")
-            .attr("stop-color", lowColor)
-            .attr("stop-opacity", 1);
-
-          key.append("rect")
-            .attr("width", w - 100)
-            .attr("height", h)
-            .style("fill", "url(#gradient)")
-            .attr("transform", "translate(0,10)");
-
-          const y = d3.scaleLinear()
-            .range([h, 0])
-            .domain([minVal, maxVal]);
-
-          const yAxis = d3.axisRight(y);
-
-          key.append("g")
-            .attr("class", "y axis")
-            .attr("transform", "translate(41,10)")
-            .call(yAxis)
+            .style("fill", d => ramp(d.properties.value));
         });
+
+        /**
+         * Map legend
+         */
+        const w = 100, h = 300;
+        const scale = 0.3;
+        const y = d3.scaleLinear()
+          .range([h, 0])
+          .domain([minVal, maxVal]);
+        const key = d3.select("#map-legend")
+          .append("svg")
+          .attr("width", w)
+          .attr("height", h)
+          .attr("class", "legend");
+        const legend = key.append("defs")
+          .append("svg:linearGradient")
+          .attr("id", "gradient")
+          .attr("x1", "100%")
+          .attr("y1", "0%")
+          .attr("x2", "100%")
+          .attr("y2", "100%")
+          .attr("spreadMethod", "pad");
+        legend.append("stop")
+          .attr("offset", "0%")
+          .attr("stop-color", highColor)
+          .attr("stop-opacity", 1);
+        legend.append("stop")
+          .attr("offset", "100%")
+          .attr("stop-color", lowColor)
+          .attr("stop-opacity", 1);
+        key.append("rect")
+          .attr("width", w * scale)
+          .attr("height", h)
+          .style("fill", "url(#gradient)")
+          .attr("transform", "translate(0,10)");
+        key.append("g")
+          .attr("class", "y axis")
+          .attr("transform", "translate(" + (w * scale + 1) + ",10)")
+          .call(d3.axisRight(y).tickFormat(d3.format("~s")));
       });
     },
   }
@@ -424,8 +396,12 @@ export default {
 
 <style type="text/css">
 
-.house-price-line-chart {
-  font: 15px sans-serif;
+.house-price {
+  font-size: 22px;
+}
+
+.house-price g {
+  font-size: 22px;
 }
 
 .house-price-line-chart .line {
@@ -436,24 +412,6 @@ export default {
 
 /* Legend Font Style */
 #chart {
-	font: 11px sans-serif;
 	background-color: #ffffff;
 }
-        
-/* Legend Position Style */
-.legend {
-	left:20px;
-	top:30px;
-}
-
-.axis text {
-	font: 10px sans-serif;
-}
-
-.axis line, .axis path {
-	fill: none;
-	stroke: #000;
-	shape-rendering: crispEdges;
-}
-
 </style>
