@@ -15,6 +15,10 @@
     </b-row>
     <b-row align-v="center">
       <b-col cols="9">
+        <div id="tooltip">
+          <h4>{{ tooltipTitle }}</h4>
+          Price ${{ tooltipStateHousePrice }}
+        </div>
         <div id="map"></div>
       </b-col>
       <b-col cols="3">
@@ -44,6 +48,9 @@ export default {
       stateData: [],
       selectedState: null,
       stateOptions: [],
+      statesMapData: [],
+      tooltipTitle: '',
+      tooltipStateHousePrice: '',
     };
   },
 
@@ -290,6 +297,7 @@ export default {
         });
     },
     drawChoroplethMap() {
+      const that = this;
       //Width and height of map
       const width = 600;
       const height = 400;
@@ -314,6 +322,7 @@ export default {
       // Load in my states data!
       const defaultUrl = `http://127.0.0.1:5000/house_price_with_time/map/2010-02`;
       d3.json(defaultUrl).then((data) => {
+        that.statesMapData = data;
         const dataArray = data.value;
         const minVal = d3.min(dataArray.filter(d => d));
         const maxVal = d3.max(dataArray.filter(d => d));
@@ -347,7 +356,23 @@ export default {
             .attr("id", d => d.properties.name)
             .style("stroke", "#fff")
             .style("stroke-width", "1")
-            .style("fill", d => ramp(d.properties.value));
+            .style("fill", d => ramp(d.properties.value))
+            .on("mouseover", function(d) {
+              that.tooltipTitle = d.properties.name;
+              that.tooltipStateHousePrice = d.properties.value;
+              let mouse = d3.mouse(this);
+              d3.select("#tooltip")
+                .style("opacity", .9);
+              d3.select("#tooltip")
+                .style("left", (mouse[0] + "px"))
+                .style("top", (mouse[1] + "px"));
+            })
+            .on("mouseout", function(d) {
+              that.tooltipTitle = '';
+              that.tooltipStateHousePrice = '';
+              d3.select("#tooltip")
+                .style("opacity", 0);
+            });
         });
 
         /**
@@ -411,7 +436,27 @@ export default {
 }
 
 /* Legend Font Style */
-#chart {
+#map {
 	background-color: #ffffff;
+}
+
+#tooltip {
+  position: absolute;           
+  text-align: center;         
+  margin: 10px;              
+  pointer-events: none;
+  background: rgba(0,0,0,0.9);
+  border: 1px solid grey;
+  border-radius: 5px;
+  font-size: 14px;
+  width: auto;
+  padding: 4px;
+  color: white;
+  opacity: 0;
+}
+
+#tooltip h4 {
+  margin: 0;
+  font-size: 22px;
 }
 </style>
