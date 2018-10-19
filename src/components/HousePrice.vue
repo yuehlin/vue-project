@@ -2,10 +2,7 @@
   <b-container>
     <b-row>
       <b-col>
-        <svg 
-          :width="svgWidth"
-          :height="svgHeight"
-        />
+        <svg class="house-price-line-chart" />
       </b-col>
       <b-col cols="3">
         <b-form-select v-model="selectedState" :options="stateOptions" class="mb-3" >
@@ -34,7 +31,7 @@ export default {
       svgHeight: 400,
       margin: {
         top: 20,
-        right: 20,
+        right: 80,
         bottom: 30,
         left: 50
       },
@@ -121,35 +118,12 @@ export default {
       let svg = d3.select("svg");
       svg.selectAll("*").remove();
 
-      /* Basic svg set up */
-      svg = d3.select("svg")
-        .attr("width", that.svgWidth)
-        .attr("height", that.svgHeight)
-        .append("g")
-        .attr("transform", "translate(" + that.margin.left + "," + that.margin.top + ")");
-      const xDomain = d3.extent(
-        that.avgData.map(d => d.date).concat(that.stateData.map(d => d.date))
-      );
-      const yDomain = d3.extent(
-        that.avgData.map(d => d.value).concat(that.stateData.map(d => d.value))
-      );
+      /**
+       * Basic svg set up 
+       */
       const x = d3.scaleTime().rangeRound([0, that.width]);
       const y = d3.scaleLinear().rangeRound([that.height, 0]);
-      x.domain(xDomain);
-      y.domain(yDomain);
-      svg.append("g")
-        .attr("transform", "translate(0," + that.height + ")")
-        .call(d3.axisBottom(x))
-        .select(".domain");
-      svg.append("g")
-        .call(d3.axisLeft(y))
-        .append("text")
-        .attr("fill", "#000")
-        .attr("transform", "rotate(-90)")
-        .attr("y", 6)
-        .attr("dy", "0.71em")
-        .attr("text-anchor", "end")
-        .text("Price ($)");
+      const color = d3.scaleOrdinal(d3.schemeCategory10);
       const line = d3.line()
         .x(function(d) {
           return x(d.date);
@@ -157,45 +131,93 @@ export default {
         .y(function(d) {
           return y(d.value);
         });
-      
-      const house_prices = [
-        {
-          name: 'avg',
+      svg = d3.select("svg")
+        .attr("width", that.svgWidth)
+        .attr("height", that.svgHeight)
+        .append("g")
+        .attr("transform", "translate(" + that.margin.left + "," + that.margin.top + ")");
+      const house_prices = [{
+          name: 'Average',
           values: that.avgData,
-        },
-      ];
+      }];
       if (that.selectedState) {
-        house_prices.push(
-          {
+        house_prices.push({
             name: that.selectedState,
             values: that.stateData,
-          },
-        );
+        });
       }
+      color.domain(house_prices.map(d => d.name));
+      const format = d3.format(".2f");
+      x.domain(d3.extent(
+        that.avgData.map(d => d.date).concat(that.stateData.map(d => d.date))
+      ));
+      y.domain( d3.extent(
+        that.avgData.map(d => format(d.value)).concat(that.stateData.map(d => format(d.value)))
+      ));
 
-      /* Draw avg data */
-      svg.append("path")
-        .datum(that.avgData)
-        .attr("fill", "none")
-        .attr("stroke", "steelblue")
-        .attr("stroke-linejoin", "round")
-        .attr("stroke-linecap", "round")
-        .attr("stroke-width", 1.5)
+      /**
+       * Lengend
+       */
+      const legend = svg.selectAll("g")
+        .data(house_prices)
+        .enter()
+        .append("g")
+        .attr("class", "legend");
+      legend.append("rect")
+        .attr("x", 40)
+        .attr("y", function(d, i) {
+          return i * 20;
+        })
+        .attr("width", 10)
+        .attr("height", 10)
+        .style("fill", function(d) {
+          return color(d.name);
+        });
+      legend.append("text")
+        .attr("x", 55)
+        .attr("y", function(d, i) {
+          return (i * 20) + 9;
+        })
+        .text(function(d) {
+          return d.name;
+        });
+
+      /**
+       * Axis
+       */
+      svg.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + that.height + ")")
+        .call(d3.axisBottom(x));
+      svg.append("g")
+        .attr("class", "y axis")
+        .call(d3.axisLeft(y))
+        .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", "0.71em")
+        .attr("text-anchor", "end")
+        .text("Price ($)");
+
+      /**
+       * Draw line
+       */
+      const house_price = svg.selectAll(".house-price")
+        .data(house_prices)
+        .enter().append("g")
+        .attr("class", "house-price");
+      house_price.append("path")
         .attr("class", "line")
-        .attr("d", line);
+        .attr("d", function(d) {
+          return line(d.values);
+        })
+        .style("stroke", function(d) {
+          return color(d.name);
+        });
 
-      /* Draw state data */
-      svg.append("path")
-        .datum(that.stateData)
-        .attr("fill", "none")
-        .attr("stroke", "steelblue")
-        .attr("stroke-linejoin", "round")
-        .attr("stroke-linecap", "round")
-        .attr("stroke-width", 1.5)
-        .attr("class", "line")
-        .attr("d", line);
-
-      /* Black vertical line to follow mouse */
+      /**
+       * Black vertical line to follow mouse
+       */
       const mouseG = svg.append("g")
         .attr("class", "mouse-over-effects");
       mouseG.append("path")
@@ -210,12 +232,15 @@ export default {
         .append("g")
         .attr("class", "mouse-per-line");
       mousePerLine.append("circle")
-        .attr("r", 7)
-        .style("stroke","steelblue")
+        .attr("r", 6)
+        .style("stroke", function(d) {
+          return color(d.name);
+        })
         .style("fill", "none")
-        .style("stroke-width", "1px")
+        .style("stroke-width", "2px")
         .style("opacity", "0");
       mousePerLine.append("text")
+        // .style("font", "14px times")
         .attr("transform", "translate(10,3)");
       // append a rect to catch mouse movements on canvas
       mouseG.append("svg:rect")
@@ -397,7 +422,17 @@ export default {
 };
 </script>
 
-<style type="text/css" scoped>
+<style type="text/css">
+
+.house-price-line-chart {
+  font: 15px sans-serif;
+}
+
+.house-price-line-chart .line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 1.5px;
+}
 
 /* Legend Font Style */
 #chart {
