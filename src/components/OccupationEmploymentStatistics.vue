@@ -16,23 +16,23 @@ export default {
 
   data() {
     return {
-      width: 850,
+      width: 860,
       height: 1010,
       margin: {
         bottom: 0,
         top: 40,
-        left: 200,
+        left: 210,
         right: 0,
       },
       columnHeight: 1000, // height of columns
       columnWidth: 30, // width of columns
       columnMarginWidth: 150, // margin between two columns
-      barMargin: 3, // margin between two bars
+      barMargin: 1, // margin between two bars
       barMinHeight: 10, // min height of each bars (including margin-top and margin-bottom)
-      labelBegin: [-195, 40], // label begin
+      labelBegin: [-200, 40], // label begin
       labelEnd: [-50, 370], // label end
-      labelPercent: [-10, 400], // percent label
-      labelExtra: [0, 430], // extra label
+      labelPercent: [-10, 405], // percent label
+      labelExtra: [-10, 440], // extra label
       header: ['State', 'Occupation'],
       colors: [
         "#FF99CC", "#66CCCC", "#FFCC33", "#6666CC", "#99CC33", "#99CCFF", "#999999", "#CC6699", "#0099CC", "#FF9900",
@@ -72,7 +72,7 @@ export default {
         .append("g")
         .attr("id", id)
         .attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")");
-      const viprocessData = this.visualize(processData);
+      const viprocessData = this.visualize(processData, true);
       // draw left column
       this.drawPart(viprocessData, id, 0);
       // draw right column
@@ -148,7 +148,7 @@ export default {
           .attr("class", "barextravalue")
           .attr("x", this.labelExtra[p])
           .attr("y", d => d.middle + 5)
-          .text("test")
+          .text(d => d.extraMean)
           .attr("text-anchor", "end");
       }
       d3.select("#" + id)
@@ -181,7 +181,7 @@ export default {
         .style("fill", d => this.colors[d.key2])
         .style("opacity", 0.5)
         .each(d => {
-          this._currentData = d;
+          this._current = d;
         });
     },
     drawHeader(id) {
@@ -200,10 +200,17 @@ export default {
           .attr("x", (this.labelEnd[d] - 10))
           .attr("y", -5)
           .style("fill", "grey");
+        if (d === 1) {
+          h.append("text")
+            .text("Work hours")
+            .attr("x", (this.labelPercent[d] - 5))
+            .attr("y", -5)
+            .style("fill", "grey");
+        }
         h.append("line")
           .attr("x1", this.labelBegin[d] - 10)
           .attr("y1", -2)
-          .attr("x2", this.labelPercent[d] + 10)
+          .attr("x2", this.labelExtra[d] + 15)
           .attr("y2", -2)
           .style("stroke", "black")
           .style("stroke-width", "1")
@@ -218,12 +225,13 @@ export default {
       newData.keys = data.keys.map(d => d);
       newData.data[m] = data.data[m].map(d => d);
       newData.data[1-m] = data.data[1-m].map(v => v.map((d, i) => (s === i ? d : 0)));
-      this.transition(this.visualize(newData), id);
+      newData.data[2] = data.data[2].map(v => v.map((d, i) => (s === i ? d : 0)));
+      this.transition(this.visualize(newData, false), id);
       const selectedBar = d3.select("#" + id)
         .select(".part" + m)
         .select(".mainbars")
         .selectAll(".mainbar")
-        .filter((d, i) => i === s);
+        .filter((d, i) => (i === s));
       selectedBar.select(".mainrect")
         .style("stroke-opacity", 1);
       selectedBar.select(".barlabel")
@@ -232,9 +240,11 @@ export default {
         .style("font-weight", "bold");
       selectedBar.select(".barpercent")
         .style("font-weight", "bold");
+      selectedBar.select(".barextravalue")
+        .style("font-weight", "bold");
     },
     deSelectSegment(data, id, m, s) {
-      this.transition(this.visualize(data), id);
+      this.transition(this.visualize(data, true), id);
       const selectedBar = d3.select("#" + id)
         .select(".part" + m)
         .select(".mainbars")
@@ -248,6 +258,8 @@ export default {
         .style("font-weight", "normal");
       selectedBar.select(".barpercent")
         .style("font-weight", "normal");
+      selectedBar.select(".barextravalue")
+        .style("font-weight", "normal");
     },
     /**
      * Support functions
@@ -260,7 +272,7 @@ export default {
         d3.set(this.oesData.map(d => d.state)).values().sort((a, b) => a < b ? -1 : a > b ? 1 : 0),
         // right column
         d3.set(this.oesData.map(d => d.occupation)).values().sort((a, b) => a < b ? -1 : a > b ? 1 : 0),
-        // extra
+        // extra column
         d3.set(this.oesData.map(d => d.occupation)).values().sort((a, b) => a < b ? -1 : a > b ? 1 : 0),
       ];
 
@@ -280,20 +292,21 @@ export default {
 
       return processData;
     },
-    visualize(data) {
+    visualize(data, all) {
+      const that = this;
       const vis = {};
       // a(number), s(top), e(bottom), b(margin between bars), m(min height of each bars)
       vis.mainBars = [
         // left column
-        this.calculatePosition(data.data[0].map(d => d3.sum(d)), 0, this.columnHeight, this.barMargin, this.barMinHeight),
+        this.calculatePosition(data.data[0].map(d => d3.sum(d)), [], all, 0, this.columnHeight, this.barMargin, this.barMinHeight),
         // right column
-        this.calculatePosition(data.data[1].map(d => d3.sum(d)), 0, this.columnHeight, this.barMargin, this.barMinHeight),
+        this.calculatePosition(data.data[1].map(d => d3.sum(d)), data.data[2].map(d => d), all, 0, this.columnHeight, this.barMargin, this.barMinHeight),
       ];
       // matrix to store subBars
       vis.subBars = [[], []];
-      vis.mainBars.forEach((pos, p) => {
+      vis.mainBars.slice(0,2).forEach((pos, p) => {
         pos.forEach((bar, i) => {
-          this.calculatePosition(data.data[p][i], bar.y, bar.y + bar.h, 0, 0).forEach((sBar, j) => {
+          this.calculatePosition(data.data[p][i], [], all, bar.y, bar.y + bar.h, 0, 0).forEach((sBar, j) => {
             sBar.key1 = (p === 0 ? i : j);
             sBar.key2 = (p === 0 ? j : i);
             vis.subBars[p].push(sBar);
@@ -318,18 +331,19 @@ export default {
 
       return vis;
     },
-    // a(number), s(top), e(bottom), b(margin between bars), m(min height of each bars)
-    calculatePosition(a, s, e, b, m) {
-			const total = d3.sum(a);
+    // a(number), ae(extra number), s(top), e(bottom), b(margin between bars), m(min height of each bars)
+    calculatePosition(a, ae, all, s, e, b, m) {
+      const total = d3.sum(a);
 			let sum = 0, neededHeight = 0, leftoverHeight = e - s - 2 * b * a.length;
 			const ret = [];
 			
-			a.forEach((d) => {
+			a.forEach((d, i) => {
         const v = {};
         v.percent = (total === 0 ? 0 : d / total); 
         v.value = d;
         v.height = Math.max(v.percent * (e - s - 2 * b * a.length), m);
         (v.height === m ? leftoverHeight -= m : neededHeight += v.height);
+        v.extraMean = ae.length ? (all ? d3.format("d")(d3.mean(ae[i])) : d3.sum(ae[i])) : null;
         ret.push(v);
       });
 			
@@ -379,10 +393,17 @@ export default {
         .duration(500)
         .attr("y", d => d.middle + 5)
         .text((d, i) => "(" + Math.round(100 * d.percent) + "%)");
+      if (p === 1) {
+        mainbar.select(".barextravalue")
+          .transition()
+          .duration(500)
+          .attr("y", d => d.middle + 5)
+          .text(d => d.extraMean);
+      }
       d3.select("#" + id)
         .select(".part" + p)
         .select(".subbars")
-        .selectAll(".subber")
+        .selectAll(".subbar")
         .data(data.subBars[p])
         .transition()
         .duration(500)
@@ -401,8 +422,8 @@ export default {
         .transition()
         .duration(500)
         .attrTween("points", (a) => {
-          const i = d3.interpolate(this._currentData, a);
-          this._currentData = i(0);
+          const i = d3.interpolate(this._current, a);
+          this._current = i(0);
           return (t) => this.edgePolygon(i(t))
         })
         .style("opacity", d => (d.h1 === 0 || d.h2 === 0 ? 0 : 0.5));
