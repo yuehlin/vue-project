@@ -28,7 +28,7 @@ export default {
       columnWidth: 30, // width of columns
       columnMarginWidth: 150, // margin between two columns
       barMargin: 3, // margin between two bars
-      barMinHeight: 5, // min height of each bars (including margin-top and margin-bottom)
+      barMinHeight: 10, // min height of each bars (including margin-top and margin-bottom)
       labelBegin: [-195, 40], // label begin
       labelEnd: [-50, 370], // label end
       labelPercent: [-10, 400], // percent label
@@ -60,6 +60,7 @@ export default {
       });
     },
     drawOes() {
+      const id = 'oesColumn';
       const processData = this.formatOesData('total_employment');
       // d3.select("#oes").selectAll("*").remove();
       const svg = d3.select("#oes")
@@ -67,13 +68,26 @@ export default {
         .attr("width", this.width)
         .attr("height", (this.height + this.margin.bottom + this.margin.top))
         .append("g")
-        .attr("id", 'oesColumn')
+        .attr("id", id)
         .attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")");
       const viprocessData = this.visualize(processData);
       // draw left column
-      this.drawPart(viprocessData, 'oesColumn', 0);
+      this.drawPart(viprocessData, id, 0);
       // draw right column
-      this.drawPart(viprocessData, 'oesColumn', 1);
+      this.drawPart(viprocessData, id, 1);
+      // draw lines between two columns
+      this.drawEdges(viprocessData, id);
+      // draw header title
+      this.drawHeader(id);
+
+      [0, 1].forEach(p => {
+        d3.select("#" + id)
+          .select(".part" + p)
+          .select(".mainbars")
+          .selectAll(".mainbar")
+          .on("mouseover", (d, i) => this.selectSegment(processData, id, p, i))
+          .on("mouseout", (d, i) => this.deSelectSegment(processData, id, p, i));
+      });
     },
     drawPart(data, id, p) {
       d3.select("#" + id)
@@ -140,6 +154,90 @@ export default {
         .attr("width", this.columnWidth)
         .attr("height", d => d.h)
         .style("fill", d => this.colors[d.key2]);
+    },
+    drawEdges(data, id) {
+      d3.select("#" + id)
+        .append("g")
+        .attr("class", "edges")
+        .attr("transform", "translate(" + this.columnWidth + ",0)");
+      d3.select("#" + id)
+        .select(".edges")
+        .selectAll(".edge")
+        .data(data.edges)
+        .enter()
+        .append("polygon")
+        .attr("class", "edge")
+        .attr("points", this.edgePolygon)
+        .style("fill", d => this.colors[d.key2])
+        .style("opacity", 0.5)
+        .each(d => {
+          this._currentData = d;
+        });
+    },
+    drawHeader(id) {
+      [0, 1].forEach(d => {
+        const h = d3.select("#" + id)
+          .select(".part" + d)
+          .append("g")
+          .attr("class", "header");
+        h.append("text")
+          .text("State")
+          .attr("x", (this.labelBegin[d] - 5))
+          .attr("y", -5)
+          .style("fill", "grey");
+        h.append("text")
+          .text("Occupation")
+          .attr("x", (this.labelEnd[d] - 10))
+          .attr("y", -5)
+          .style("fill", "grey");
+        h.append("line")
+          .attr("x1", this.labelBegin[d] - 10)
+          .attr("y1", -2)
+          .attr("x2", this.labelPercent[d] + 10)
+          .attr("y2", -2)
+          .style("stroke", "black")
+          .style("stroke-width", "1")
+          .style("shape-rendering", "crispEdges");
+      });
+    },
+    selectSegment(data, id, m, s) {
+      const newData = {
+        keys: [],
+        data: [],
+      };
+      newData.keys = data.keys.map(d => d);
+      newData.data[m] = data.data[m].map(d => d);
+      newData.data[1-m] = data.data[1-m].map(v => v.map((d, i) => (s === i ? d : 0)));
+      this.transition(this.visualize(newData), id);
+      const selectedBar = d3.select("#" + id)
+        .select(".part" + m)
+        .select(".mainbars")
+        .selectAll(".mainbar")
+        .filter((d, i) => i === s);
+      selectedBar.select(".mainrect")
+        .style("stroke-opacity", 1);
+      selectedBar.select(".barlabel")
+        .style("font-weight", "bold");
+      selectedBar.select(".barvalue")
+        .style("font-weight", "bold");
+      selectedBar.select(".barpercent")
+        .style("font-weight", "bold");
+    },
+    deSelectSegment(data, id, m, s) {
+      this.transition(this.visualize(data), id);
+      const selectedBar = d3.select("#" + id)
+        .select(".part" + m)
+        .select(".mainbars")
+        .selectAll(".mainbar")
+        .filter((d, i) => i === s);
+      selectedBar.select(".mainrect")
+        .style("stroke-opacity", 0);
+      selectedBar.select(".barlabel")
+        .style("font-weight", "normal");
+      selectedBar.select(".barvalue")
+        .style("font-weight", "normal");
+      selectedBar.select(".barpercent")
+        .style("font-weight", "normal");
     },
     /**
      * Support functions
@@ -233,7 +331,68 @@ export default {
       });
 
 			return ret;
-		},
+    },
+    edgePolygon(d) {
+      return [0, d.y1, this.columnMarginWidth, d.y2, this.columnMarginWidth, d.y2 + d.h2, 0, d.y1 + d.h1].join(" ");
+    },
+    transition(data, id) {
+      this.transitionPart(data, id, 0);
+      this.transitionPart(data, id, 1);
+      this.transitionEdges(data, id);
+    },
+    transitionPart(data, id, p) {
+      const mainbar = d3.select("#" + id)
+        .select(".part" + p)
+        .select(".mainbars")
+        .selectAll(".mainbar")
+        .data(data.mainBars[p]);
+      mainbar.select(".mainrect")
+        .transition()
+        .duration(500)
+        .attr("y", d => d.middle - d.height / 2)
+        .attr("height", d => d.height);
+      mainbar.select(".barlabel")
+        .transition()
+        .duration(500)
+        .attr("y", d => d.middle + 5);
+      mainbar.select(".barvalue")
+        .transition()
+        .duration(500)
+        .attr("y", d => d.middle + 5)
+        .text((d, i) => d.value);
+      mainbar.select(".barpercent")
+        .transition()
+        .duration(500)
+        .attr("y", d => d.middle + 5)
+        .text((d, i) => "(" + Math.round(100 * d.percent) + "%)");
+      d3.select("#" + id)
+        .select(".part" + p)
+        .select(".subbars")
+        .selectAll(".subber")
+        .data(data.subBars[p])
+        .transition()
+        .duration(500)
+        .attr("y", d => d.y)
+        .attr("height", d => d.h);
+    },
+    transitionEdges(data, id) {
+      // d3.select("#" + id)
+      //   .append("g")
+      //   .attr("class", "edges")
+      //   .attr("transform", "translate(" + this.columnWidth + ",0)");
+      d3.select("#" + id)
+        .select(".edges")
+        .selectAll(".edge")
+        .data(data.edges)
+        .transition()
+        .duration(500)
+        .attrTween("points", (a) => {
+          const i = d3.interpolate(this._currentData, a);
+          this._currentData = i(0);
+          return (t) => this.edgePolygon(i(t))
+        })
+        .style("opacity", d => (d.h1 === 0 || d.h2 === 0 ? 0 : 0.5));
+    },
   },
 };
 </script>

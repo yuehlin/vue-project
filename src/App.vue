@@ -6,6 +6,7 @@
       <b-collapse is-nav id="nav_collapse">
         <b-navbar-nav>
           <b-nav-item href="#" @click="showHousePrice">House Price</b-nav-item>
+          <b-nav-item href="#" @click="showMonthlyPayment">Monthly Payment</b-nav-item>
           <b-nav-item href="#" @click="showOes">Occupation Employment Statistics</b-nav-item>
         </b-navbar-nav>
       </b-collapse>
@@ -14,6 +15,7 @@
     <b-container>
       <b-row>
         <HousePrice v-if="housePriceDisplay" />
+        <MonthlyPayment v-if="monthlyPaymentDisplay" />
         <Oes v-if="oesDisplay" />
       </b-row>
     </b-container>
@@ -22,6 +24,7 @@
 
 <script>
 import HousePrice from './components/HousePrice.vue';
+import MonthlyPayment from './components/MonthlyPayment.vue';
 import Oes from './components/OccupationEmploymentStatistics.vue';
 
 export default {
@@ -29,12 +32,14 @@ export default {
 
   components: {
     HousePrice,
+    MonthlyPayment,
     Oes,
   },
 
   data() {
     return {
       housePriceDisplay: true,
+      monthlyPaymentDisplay: false,
       oesDisplay: false,
     };
   },
@@ -42,10 +47,17 @@ export default {
   methods: {
     showHousePrice() {
       this.housePriceDisplay = true;
+      this.monthlyPaymentDisplay = false;
+      this.oesDisplay = false;
+    },
+    showMonthlyPayment() {
+      this.housePriceDisplay = false;
+      this.monthlyPaymentDisplay = true;
       this.oesDisplay = false;
     },
     showOes() {
       this.housePriceDisplay = false;
+      this.monthlyPaymentDisplay = false;
       this.oesDisplay = true;
     },
   },
