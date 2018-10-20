@@ -180,7 +180,7 @@ export default {
         .attr("points", this.edgePolygon)
         .style("fill", d => this.colors[d.key2])
         .style("opacity", 0.5)
-        .each(d => {
+        .each(function(d) {
           this._current = d;
         });
     },
@@ -411,6 +411,7 @@ export default {
         .attr("height", d => d.h);
     },
     transitionEdges(data, id) {
+      const that = this;
       // d3.select("#" + id)
       //   .append("g")
       //   .attr("class", "edges")
@@ -421,10 +422,12 @@ export default {
         .data(data.edges)
         .transition()
         .duration(500)
-        .attrTween("points", (a) => {
+        .attrTween("points", function(a) {
           const i = d3.interpolate(this._current, a);
           this._current = i(0);
-          return (t) => this.edgePolygon(i(t))
+          return function(t) {
+            return that.edgePolygon(i(t));
+          };
         })
         .style("opacity", d => (d.h1 === 0 || d.h2 === 0 ? 0 : 0.5));
     },
