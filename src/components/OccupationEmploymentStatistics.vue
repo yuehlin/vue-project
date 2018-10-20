@@ -16,13 +16,13 @@ export default {
 
   data() {
     return {
-      width: 800,
+      width: 850,
       height: 1010,
       margin: {
         bottom: 0,
         top: 40,
         left: 200,
-        right: 50,
+        right: 0,
       },
       columnHeight: 1000, // height of columns
       columnWidth: 30, // width of columns
@@ -32,6 +32,8 @@ export default {
       labelBegin: [-195, 40], // label begin
       labelEnd: [-50, 370], // label end
       labelPercent: [-10, 400], // percent label
+      labelExtra: [0, 430], // extra label
+      header: ['State', 'Occupation'],
       colors: [
         "#FF99CC", "#66CCCC", "#FFCC33", "#6666CC", "#99CC33", "#99CCFF", "#999999", "#CC6699", "#0099CC", "#FF9900",
         "#FF99CC", "#66CCCC", "#FFCC33", "#6666CC", "#99CC33", "#99CCFF", "#999999", "#CC6699", "#0099CC", "#FF9900",
@@ -61,7 +63,7 @@ export default {
     },
     drawOes() {
       const id = 'oesColumn';
-      const processData = this.formatOesData('total_employment');
+      const processData = this.formatOesData();
       // d3.select("#oes").selectAll("*").remove();
       const svg = d3.select("#oes")
         .append("svg")
@@ -141,6 +143,14 @@ export default {
         .text((d, i) => "(" + Math.round(100 * d.percent) + "%)")
         .attr("text-anchor", "end")
         .style("fill", "grey");
+      if (p === 1) {
+        mainbar.append("text")
+          .attr("class", "barextravalue")
+          .attr("x", this.labelExtra[p])
+          .attr("y", d => d.middle + 5)
+          .text("test")
+          .attr("text-anchor", "end");
+      }
       d3.select("#" + id)
         .select(".part" + p)
         .select(".subbars")
@@ -181,12 +191,12 @@ export default {
           .append("g")
           .attr("class", "header");
         h.append("text")
-          .text("State")
+          .text(this.header[d])
           .attr("x", (this.labelBegin[d] - 5))
           .attr("y", -5)
           .style("fill", "grey");
         h.append("text")
-          .text("Occupation")
+          .text("Count")
           .attr("x", (this.labelEnd[d] - 10))
           .attr("y", -5)
           .style("fill", "grey");
@@ -242,7 +252,7 @@ export default {
     /**
      * Support functions
      */
-    formatOesData(type) {
+    formatOesData() {
       const processData = {};
       // Keys: sort by the first letter
       processData.keys = [
@@ -250,18 +260,22 @@ export default {
         d3.set(this.oesData.map(d => d.state)).values().sort((a, b) => a < b ? -1 : a > b ? 1 : 0),
         // right column
         d3.set(this.oesData.map(d => d.occupation)).values().sort((a, b) => a < b ? -1 : a > b ? 1 : 0),
+        // extra
+        d3.set(this.oesData.map(d => d.occupation)).values().sort((a, b) => a < b ? -1 : a > b ? 1 : 0),
       ];
 
       // Data matrix: create a matrix to store data
       processData.data = [
         processData.keys[0].map(d => processData.keys[1].map(v => 0)),
         processData.keys[1].map(d => processData.keys[0].map(v => 0)),
+        processData.keys[2].map(d => processData.keys[0].map(v => 0)),
       ];
 
       // Data: input data according to p value
       this.oesData.forEach(d => {
-        processData.data[0][processData.keys[0].indexOf(d.state)][processData.keys[1].indexOf(d.occupation)] = d[type];
-        processData.data[1][processData.keys[1].indexOf(d.occupation)][processData.keys[0].indexOf(d.state)] = d[type];
+        processData.data[0][processData.keys[0].indexOf(d.state)][processData.keys[1].indexOf(d.occupation)] = d['total_employment'];
+        processData.data[1][processData.keys[1].indexOf(d.occupation)][processData.keys[0].indexOf(d.state)] = d['total_employment'];
+        processData.data[2][processData.keys[2].indexOf(d.occupation)][processData.keys[0].indexOf(d.state)] = d['mean_work_hour'];
       })
 
       return processData;
