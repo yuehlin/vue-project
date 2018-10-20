@@ -1,11 +1,11 @@
 <template>
   <div id="app">
-    <b-navbar toggleable="md" type="dark" variant="info" :sticky="true">
+    <b-navbar toggleable="md" type="light" variant="light" :sticky="true">
       <b-navbar-toggle target="nav_collapse"></b-navbar-toggle>
       <b-navbar-brand href="#">NavBar</b-navbar-brand>
       <b-collapse is-nav id="nav_collapse">
         <b-navbar-nav>
-          <b-nav-item href="#line-chart">Line Chart</b-nav-item>
+          <b-nav-item href="#house-price-section">House Price</b-nav-item>
         </b-navbar-nav>
       </b-collapse>
     </b-navbar>

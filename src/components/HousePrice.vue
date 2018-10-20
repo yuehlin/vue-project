@@ -14,14 +14,14 @@
       </b-col>
     </b-row>
     <b-row align-v="center">
-      <b-col cols="9">
+      <b-col>
         <div id="tooltip">
           <h4>{{ tooltipTitle }}</h4>
           Price ${{ tooltipStateHousePrice }}
         </div>
         <div id="map"></div>
       </b-col>
-      <b-col cols="3">
+      <b-col cols="1">
         <div id="map-legend"></div>
       </b-col>
     </b-row>
@@ -51,6 +51,7 @@ export default {
       statesMapData: [],
       tooltipTitle: '',
       tooltipStateHousePrice: '',
+      clickedMonth: '2010-01',
     };
   },
 
@@ -191,6 +192,8 @@ export default {
         .attr("transform", "translate(" + (that.width / 2) + "," + (that.height + that.margin.top + 20) + ")")
         .style("text-anchor", "middle")
         .text("Time");
+      svg.append("text")
+        .attr("")
       svg.append("g")
         .call(d3.axisLeft(y).tickFormat(d3.format("~s")).ticks(5));
       svg.append("text")
@@ -276,6 +279,7 @@ export default {
               const xDate = x.invert(mouse[0]),
                     bisect = d3.bisector(d => d.date).right,
                     idx = bisect(d.values, xDate);
+              that.clickedMonth = xDate.getFullYear() + '-' + ('0' + (xDate.getMonth() + 1)).slice(-2);
               let beginning = 0,
                   end = lines[i].getTotalLength(),
                   target = null,
@@ -294,6 +298,10 @@ export default {
                 .text(y.invert(pos.y).toFixed(2));
               return "translate(" + mouse[0] + "," + pos.y + ")";
             });
+        })
+        // mouse click on canvas 
+        .on("click", () => {
+          this.drawChoroplethMap();
         });
     },
     drawChoroplethMap() {
@@ -301,8 +309,8 @@ export default {
       //Width and height of map
       const width = 600;
       const height = 400;
-      const lowColor = '#f9f9f9'
-      const highColor = '#bc2a66'
+      const lowColor = '#ffffcc'
+      const highColor = '#800026'
 
       // D3 Projection
       const projection = d3.geoAlbersUsa()
@@ -313,19 +321,24 @@ export default {
       const path = d3.geoPath() // path generator that will convert GeoJSON to SVG paths
         .projection(projection); // tell path generator to use albersUsa projection
 
-      //Create SVG element and append map to the SVG
+      // Create SVG element and append map to the SVG
+      d3.select("#map")
+        .selectAll("*")
+        .remove();
       const svg = d3.select("#map")
         .append("svg")
         .attr("width", width)
         .attr("height", height);
 
-      // Load in my states data!
-      const defaultUrl = `http://127.0.0.1:5000/house_price_with_time/map/2010-02`;
+      // Load in states data
+      const defaultUrl = `http://127.0.0.1:5000/house_price_with_time/map/` + that.clickedMonth;
       d3.json(defaultUrl).then((data) => {
         that.statesMapData = data;
         const dataArray = data.value;
-        const minVal = d3.min(dataArray.filter(d => d));
-        const maxVal = d3.max(dataArray.filter(d => d));
+        // const minVal = d3.min(dataArray.filter(d => d).map(d => parseFloat(d)));
+        // const maxVal = d3.max(dataArray.filter(d => d).map(d => parseFloat(d)));
+        const minVal = 100000;
+        const maxVal = 650000;
         const ramp = d3.scaleLinear().domain([minVal,maxVal]).range([lowColor,highColor]);
 
         // Load GeoJSON data and merge with states data
@@ -352,6 +365,7 @@ export default {
             .data(json.features)
             .enter()
             .append("path")
+            .attr("class", "state")
             .attr("d", path)
             .attr("id", d => d.properties.name)
             .style("stroke", "#fff")
@@ -373,6 +387,13 @@ export default {
               d3.select("#tooltip")
                 .style("opacity", 0);
             });
+
+          // Add title
+          svg.append("text")
+            .attr("x", (width / 2))
+            .attr("y", 30)
+            .attr("text-anchor", "middle")
+            .text(that.clickedMonth);
         });
 
         /**
@@ -383,6 +404,9 @@ export default {
         const y = d3.scaleLinear()
           .range([h, 0])
           .domain([minVal, maxVal]);
+        d3.select("#map-legend")
+          .selectAll("*")
+          .remove();
         const key = d3.select("#map-legend")
           .append("svg")
           .attr("width", w)
@@ -422,11 +446,11 @@ export default {
 <style type="text/css">
 
 .house-price {
-  font-size: 22px;
+  font-size: 15px;
 }
 
 .house-price g {
-  font-size: 22px;
+  font-size: 15px;
 }
 
 .house-price-line-chart .line {
@@ -438,6 +462,16 @@ export default {
 /* Legend Font Style */
 #map {
 	background-color: #ffffff;
+}
+
+#map .state{
+  fill: none;
+  stroke: #a9a9a9;
+  stroke-width: 1;
+}
+
+#map .state:hover{
+  fill-opacity:0.5;
 }
 
 #tooltip {
@@ -457,6 +491,6 @@ export default {
 
 #tooltip h4 {
   margin: 0;
-  font-size: 22px;
+  font-size: 15px;
 }
 </style>
