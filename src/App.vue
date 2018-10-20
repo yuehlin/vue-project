@@ -5,14 +5,16 @@
       <b-navbar-brand href="#">NavBar</b-navbar-brand>
       <b-collapse is-nav id="nav_collapse">
         <b-navbar-nav>
-          <b-nav-item href="#house-price-section">House Price</b-nav-item>
+          <b-nav-item href="#" @click="showHousePrice">House Price</b-nav-item>
+          <b-nav-item href="#" @click="showOes">Occupation Employment Statistics</b-nav-item>
         </b-navbar-nav>
       </b-collapse>
     </b-navbar>
     
-    <b-container id="house-price-section">
+    <b-container>
       <b-row>
-        <HousePrice />
+        <HousePrice v-if="housePriceDisplay" />
+        <Oes v-if="oesDisplay" />
       </b-row>
     </b-container>
   </div>
@@ -20,11 +22,32 @@
 
 <script>
 import HousePrice from './components/HousePrice.vue';
+import Oes from './components/OccupationEmploymentStatistics.vue';
 
 export default {
   name: 'app',
+
   components: {
     HousePrice,
+    Oes,
+  },
+
+  data() {
+    return {
+      housePriceDisplay: true,
+      oesDisplay: false,
+    };
+  },
+
+  methods: {
+    showHousePrice() {
+      this.housePriceDisplay = true;
+      this.oesDisplay = false;
+    },
+    showOes() {
+      this.housePriceDisplay = false;
+      this.oesDisplay = true;
+    },
   },
 }
 </script>

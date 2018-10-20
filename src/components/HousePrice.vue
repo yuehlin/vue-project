@@ -1,6 +1,6 @@
 <template>
   <b-container class="house-price">
-    <b-row>
+    <b-row align-v="center">
       <b-col>
         <svg class="house-price-line-chart" />
       </b-col>
@@ -443,8 +443,7 @@ export default {
 };
 </script>
 
-<style type="text/css">
-
+<style>
 .house-price {
   font-size: 15px;
 }
