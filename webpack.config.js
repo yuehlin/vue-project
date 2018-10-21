@@ -1,6 +1,7 @@
 var path = require('path')
 var webpack = require('webpack')
-const ExtractTextPlugin = require("extract-text-webpack-plugin")
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const VueLoaderPlugin = require('vue-loader/lib/plugin')
 
 module.exports = {
   entry: './src/main.js',
@@ -9,6 +10,10 @@ module.exports = {
     publicPath: '/dist/',
     filename: 'build.js'
   },
+  stats: {
+    entrypoints: false,
+    children: false,
+ },
   module: {
     rules: [
       {
@@ -31,11 +36,12 @@ module.exports = {
         exclude: /node_modules/
       },
       {
-        test: /\.css$/,
-        use: ExtractTextPlugin.extract({
-          fallback: "style-loader",
-          use: "css-loader"
-        })
+        test: /\.(scss|css)$/,
+        use: [
+          MiniCssExtractPlugin.loader,
+          'css-loader',
+          'sass-loader',
+        ],
       },
       {
         test: /\.(png|jpg|gif|svg)$/,
@@ -58,8 +64,16 @@ module.exports = {
   performance: {
     hints: false
   },
-  plugins: [new ExtractTextPlugin("main.css")],
-  devtool: '#eval-source-map'
+  plugins: [
+    new MiniCssExtractPlugin({
+      filename: 'css/main.css',
+    }),
+    new VueLoaderPlugin(),
+  ],
+  optimization: {
+    minimizer: []
+  },
+  devtool: '#eval-source-map',
 }
 
 if (process.env.NODE_ENV === 'production') {
@@ -69,12 +83,6 @@ if (process.env.NODE_ENV === 'production') {
     new webpack.DefinePlugin({
       'process.env': {
         NODE_ENV: '"production"'
-      }
-    }),
-    new webpack.optimize.UglifyJsPlugin({
-      sourceMap: true,
-      compress: {
-        warnings: false
       }
     }),
     new webpack.LoaderOptionsPlugin({
