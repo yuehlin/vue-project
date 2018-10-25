@@ -61,7 +61,7 @@ export default {
     },
     height() {
       return this.svgHeight - this.margin.top - this.margin.bottom;
-    }
+    },
   },
 
   mounted() {
@@ -85,7 +85,7 @@ export default {
   methods: {
     getAverageHousePriceData() {
       const that = this;
-      const defaultUrl = `http://127.0.0.1:5000/house_price_with_time`;
+      const defaultUrl = `${this.dbHostUrl}/house_price_with_time`;
       d3.json(defaultUrl).then((response) => {
         that.avgData = [];
         for (let i = 0, len = response.time.length; i < len; i++) {
@@ -99,7 +99,7 @@ export default {
     getStateHousePriceData() {
       const that = this;
       if (that.selectedState) {
-        const defaultUrl = `http://127.0.0.1:5000/house_price_with_time/` + that.selectedState;
+        const defaultUrl = `${this.dbHostUrl}/house_price_with_time/` + that.selectedState;
         d3.json(defaultUrl).then((response) => {
           that.stateData = [];
           for (let i = 0, len = response.time.length; i < len; i++) {
@@ -113,7 +113,7 @@ export default {
     },
     getStates() {
       const that = this;
-      const defaultUrl = `http://127.0.0.1:5000/state_name`;
+      const defaultUrl = `${this.dbHostUrl}/state_name`;
       const states = [];
       d3.json(defaultUrl).then((response) => {
         response.forEach(element => {
@@ -131,7 +131,7 @@ export default {
       svg.selectAll("*").remove();
 
       /**
-       * Basic svg set up 
+       * Basic svg set up
        */
       const x = d3.scaleTime().rangeRound([0, that.width]);
       const y = d3.scaleLinear().rangeRound([that.height, 0]);
@@ -299,7 +299,7 @@ export default {
               return "translate(" + mouse[0] + "," + pos.y + ")";
             });
         })
-        // mouse click on canvas 
+        // mouse click on canvas
         .on("click", () => {
           this.drawChoroplethMap();
         });
@@ -331,7 +331,7 @@ export default {
         .attr("height", height);
 
       // Load in states data
-      const defaultUrl = `http://127.0.0.1:5000/house_price_with_time/map/` + that.clickedMonth;
+      const defaultUrl = `${this.dbHostUrl}/house_price_with_time/map/` + that.clickedMonth;
       d3.json(defaultUrl).then((data) => {
         that.statesMapData = data;
         const dataArray = data.value;
@@ -347,7 +347,7 @@ export default {
           for (let i = 0; i < data.state.length; i++) {
             // Grab State Name
             const dataState = data.state[i];
-            // Grab data value 
+            // Grab data value
             const dataValue = data.value[i];
             // Find the corresponding state inside the GeoJSON
             for (let j = 0; j < json.features.length; j++) {
@@ -474,9 +474,9 @@ export default {
 }
 
 #tooltip {
-  position: absolute;           
-  text-align: center;         
-  margin: 10px;              
+  position: absolute;
+  text-align: center;
+  margin: 10px;
   pointer-events: none;
   background: rgba(0,0,0,0.9);
   border: 1px solid grey;

@@ -43,6 +43,9 @@ export default {
     };
   },
 
+  computed: {
+  },
+
   mounted() {
     this.getOccAndWorkhourData();
   },
@@ -56,7 +59,7 @@ export default {
   methods: {
     getOccAndWorkhourData() {
       const that = this;
-      const defaultUrl = `http://127.0.0.1:5000/occ_and_workhour`;
+      const defaultUrl = `${this.dbHostUrl}/occ_and_workhour`;
       d3.json(defaultUrl).then((response) => {
         that.oesData = response;
       });
@@ -104,7 +107,7 @@ export default {
         .select(".part" + p)
         .append("g")
         .attr("class", "mainbars");
-      
+
       const mainbar = d3.select("#" + id)
         .select(".part" + p)
         .select(".mainbars")
@@ -336,20 +339,20 @@ export default {
       const total = d3.sum(a);
 			let sum = 0, neededHeight = 0, leftoverHeight = e - s - 2 * b * a.length;
 			const ret = [];
-			
+
 			a.forEach((d, i) => {
         const v = {};
-        v.percent = (total === 0 ? 0 : d / total); 
+        v.percent = (total === 0 ? 0 : d / total);
         v.value = d;
         v.height = Math.max(v.percent * (e - s - 2 * b * a.length), m);
         (v.height === m ? leftoverHeight -= m : neededHeight += v.height);
         v.extraMean = ae.length ? (all ? d3.format("d")(d3.mean(ae[i])) : d3.sum(ae[i])) : null;
         ret.push(v);
       });
-			
+
 			const scaleFact = leftoverHeight / Math.max(neededHeight, 1);
-			ret.forEach((d) => { 
-					d.percent = scaleFact * d.percent; 
+			ret.forEach((d) => {
+					d.percent = scaleFact * d.percent;
 					d.height = (d.height === m ? m : d.height * scaleFact);
 					d.middle = sum + b + d.height / 2;
 					d.y = s + d.middle - d.percent * (e - s - 2 * b * a.length) / 2;

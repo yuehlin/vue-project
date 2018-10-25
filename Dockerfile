@@ -7,7 +7,8 @@ RUN apk add --update nginx nodejs
 # Create the directories we will need
 RUN mkdir -p /tmp/nginx/vue
 RUN mkdir -p /var/log/nginx
-RUN mkdir -p /var/www/html
+RUN mkdir -p /var/www/html/dist
+RUN mkdir -p /var/www/html/src/assets
 
 # Copy the respective nginx configuration files
 COPY nginx_config/nginx.conf /etc/nginx/nginx.conf
@@ -24,7 +25,9 @@ RUN npm install
 RUN npm run build
 
 # Copy the built app to our served directory
-RUN cp -r dist/* /var/www/html
+RUN cp -r ./dist/* /var/www/html/dist
+RUN cp ./src/assets/us-states.json /var/www/html/src/assets
+RUN cp ./index.html /var/www/html
 
 # Make all files belong to the nginx user
 RUN chown -R nginx:nginx /var/www/html

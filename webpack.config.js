@@ -59,14 +59,16 @@ module.exports = {
   },
   devServer: {
     historyApiFallback: true,
-    noInfo: true
+    noInfo: true,
+    host: '0.0.0.0',                                                                                                                                       
+    disableHostCheck: true
   },
   performance: {
     hints: false
   },
   plugins: [
     new MiniCssExtractPlugin({
-      filename: 'css/main.css',
+      filename: 'main.css',
     }),
     new VueLoaderPlugin(),
   ],
@@ -77,14 +79,9 @@ module.exports = {
 }
 
 if (process.env.NODE_ENV === 'production') {
+  module.exports.mode = 'production',
   module.exports.devtool = '#source-map'
-  // http://vue-loader.vuejs.org/en/workflow/production.html
   module.exports.plugins = (module.exports.plugins || []).concat([
-    new webpack.DefinePlugin({
-      'process.env': {
-        NODE_ENV: '"production"'
-      }
-    }),
     new webpack.LoaderOptionsPlugin({
       minimize: true
     })

@@ -16,8 +16,11 @@ export default {
 
   data() {
     return {
-      monthlyPaymentData: []
+      monthlyPaymentData: [],
     };
+  },
+
+  computed: {
   },
 
   mounted() {
@@ -33,7 +36,7 @@ export default {
   methods: {
     getMonthlyPaymentData() {
       const that = this;
-      const defaultUrl = `http://127.0.0.1:5000/monthly_payment_high_and_low_groups`;
+      const defaultUrl = `${this.dbHostUrl}/monthly_payment_high_and_low_groups`;
       d3.json(defaultUrl).then(response => {
         that.monthlyPaymentData = response;
       });
